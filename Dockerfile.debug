@@ -1,0 +1,25 @@
+FROM golang:1.12-alpine3.9 AS  build-env
+RUN apk add --no-cache git && \
+    go get github.com/derekparker/delve/cmd/dlv
+
+ENV CGO_ENABLED 0
+ENV GO111MODULE on
+
+ADD . /go/src/github.com/chr-fritz/csi-sshfs
+WORKDIR /go/src/github.com/chr-fritz/csi-sshfs
+
+RUN go mod download
+RUN export BUILD_TIME=`date -R` && \
+    export VERSION=`cat /go/src/github.com/chr-fritz/csi-sshfs/.version.tmp 2&> /dev/null`
+RUN go build -o /csi-sshfs -ldflags "-X 'main.BuildTime=${BUILD_TIME}' -X 'pkg.sshfs.Version=${VERSION}'" -gcflags "all=-N -l" github.com/chr-fritz/csi-sshfs/cmd/csi-sshfs
+
+FROM alpine:3.9
+EXPOSE 40000
+RUN apk add --no-cache ca-certificates sshfs findmnt libc6-compat
+
+COPY --from=build-env /csi-sshfs /bin/csi-sshfs
+COPY --from=build-env /go/bin/dlv /
+
+
+ENTRYPOINT ["/dlv", "--listen=:40000", "--headless=true", "--api-version=2", "exec", "/bin/csi-sshfs"]
+CMD [""]
