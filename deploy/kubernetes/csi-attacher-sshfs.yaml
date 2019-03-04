@@ -45,8 +45,8 @@ spec:
             - name: socket-dir
               mountPath: /csi
 
-        - name: nfs
-          image: quay.io/k8scsi/sshfs:v1.0.0
+        - name: sshfs
+          image: chrfritz/csi-nodeplugin-sshfs:latest
           args :
             - "--nodeid=$(NODE_ID)"
             - "--endpoint=$(CSI_ENDPOINT)"

@@ -36,13 +36,13 @@ spec:
               mountPath: /plugin
             - name: registration-dir
               mountPath: /registration
-        - name: nfs
+        - name: sshfs
           securityContext:
             privileged: true
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: quay.io/k8scsi/sshfs:v1.0.0
+          image: chrfritz/csi-nodeplugin-sshfs:latest
           args:
             - "--nodeid=$(NODE_ID)"
             - "--endpoint=$(CSI_ENDPOINT)"
@@ -53,7 +53,7 @@ spec:
                   fieldPath: spec.nodeName
             - name: CSI_ENDPOINT
               value: unix://plugin/csi.sock
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           volumeMounts:
             - name: plugin-dir
               mountPath: /plugin
