@@ -106,6 +106,7 @@ func (ns *nodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
+		delete(ns.mounts, point.VolumeId)
 		glog.Infof("successfully unmount volume: %s", point)
 	}
 

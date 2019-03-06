@@ -24,8 +24,8 @@ func main() {
 	flag.CommandLine.Parse([]string{})
 
 	cmd := &cobra.Command{
-		Use:   "NFS",
-		Short: "CSI based NFS driver",
+		Use:   "sshfs",
+		Short: "CSI based SSHFS driver",
 		Run: func(cmd *cobra.Command, args []string) {
 			handle()
 		},
