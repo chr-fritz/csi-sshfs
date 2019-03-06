@@ -172,7 +172,7 @@ func Mount(user string, host string, dir string, target string, privateKey strin
 		source,
 		target,
 		"-o", "IdentityFile="+privateKey,
-		"-o", "StrictHostKeyChecking=no",
+		"-o", "StrictHostKeyChecking=accept-new",
 		"-o", "UserKnownHostsFile=/dev/null",
 	)
 
