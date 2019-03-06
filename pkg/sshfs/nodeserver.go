@@ -2,7 +2,12 @@ package sshfs
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
+	"io/ioutil"
+	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -21,15 +26,15 @@ type nodeServer struct {
 
 func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
 	targetPath := req.GetTargetPath()
-	notMnt, err := mount.New("").IsLikelyNotMountPoint(targetPath)
-	if err != nil {
-		if os.IsNotExist(err) {
+	notMnt, e := mount.New("").IsLikelyNotMountPoint(targetPath)
+	if e != nil {
+		if os.IsNotExist(e) {
 			if err := os.MkdirAll(targetPath, 0750); err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 			notMnt = true
 		} else {
-			return nil, status.Error(codes.Internal, err.Error())
+			return nil, status.Error(codes.Internal, e.Error())
 		}
 	}
 
@@ -37,26 +42,34 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		return &csi.NodePublishVolumeResponse{}, nil
 	}
 
-	mo := req.GetVolumeCapability().GetMount().GetMountFlags()
+	mountOptions := req.GetVolumeCapability().GetMount().GetMountFlags()
 	if req.GetReadonly() {
-		mo = append(mo, "ro")
+		mountOptions = append(mountOptions, "ro")
 	}
 
-	s := req.GetVolumeContext()["server"]
-
+	server := req.GetVolumeContext()["server"]
+	user := req.GetVolumeContext()["user"]
 	ep := req.GetVolumeContext()["share"]
-	source := fmt.Sprintf("%s:%s", s, ep)
+	privateKey := req.GetVolumeContext()["privateKey"]
 
-	mounter := mount.New("")
-	err = mounter.Mount(source, targetPath, "nfs", mo)
-	if err != nil {
-		if os.IsPermission(err) {
-			return nil, status.Error(codes.PermissionDenied, err.Error())
+	secret, e := getPublicKeySecret(privateKey)
+	if e != nil {
+		return nil, e
+	}
+	privateKeyPath, e := writePrivateKey(secret)
+	if e != nil {
+		return nil, e
+	}
+
+	e = Mount(user, server, ep, targetPath, privateKeyPath)
+	if e != nil {
+		if os.IsPermission(e) {
+			return nil, status.Error(codes.PermissionDenied, e.Error())
 		}
-		if strings.Contains(err.Error(), "invalid argument") {
-			return nil, status.Error(codes.InvalidArgument, err.Error())
+		if strings.Contains(e.Error(), "invalid argument") {
+			return nil, status.Error(codes.InvalidArgument, e.Error())
 		}
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, e.Error())
 	}
 
 	return &csi.NodePublishVolumeResponse{}, nil
@@ -91,4 +104,84 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 
 func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
 	return &csi.NodeStageVolumeResponse{}, nil
+}
+
+func getPublicKeySecret(secretName string) (*v1.Secret, error) {
+	namespaceAndSecret := strings.SplitN(secretName, "/", 2)
+	namespace := namespaceAndSecret[0]
+	name := namespaceAndSecret[1]
+
+	clientset, e := GetK8sClient()
+	if e != nil {
+		return nil, status.Errorf(codes.Internal, "can not create kubernetes client: %s", e)
+	}
+
+	secret, e := clientset.CoreV1().
+		Secrets(namespace).
+		Get(name, metav1.GetOptions{})
+
+	if e != nil {
+		return nil, status.Errorf(codes.Internal, "can not get secret %s: %s", secretName, e)
+	}
+
+	if secret.Type != v1.SecretTypeSSHAuth {
+		return nil, status.Errorf(codes.InvalidArgument, "type of secret %s is not %s", secretName, v1.SecretTypeSSHAuth)
+	}
+	return secret, nil
+}
+
+func writePrivateKey(secret *v1.Secret) (string, error) {
+	f, e := ioutil.TempFile("", "pk-*")
+	defer f.Close()
+	if e != nil {
+		return "", status.Errorf(codes.Internal, "can not create tmp file for pk: %s", e)
+	}
+
+	_, e = f.Write(secret.Data[v1.SSHAuthPrivateKey])
+	if e != nil {
+		return "", status.Errorf(codes.Internal, "can not create tmp file for pk: %s", e)
+	}
+	e = f.Chmod(0600)
+	if e != nil {
+		return "", status.Errorf(codes.Internal, "can not change rights for pk: %s", e)
+	}
+	return f.Name(), nil
+}
+
+func Mount(user string, host string, dir string, target string, privateKey string, opts ...string) error {
+	mountCmd := "sshfs"
+	mountArgs := []string{}
+
+	source := fmt.Sprintf("%s@%s:%s", user, host, dir)
+	mountArgs = append(
+		mountArgs,
+		source,
+		target,
+		"-o", "IdentityFile="+privateKey,
+		"-o", "StrictHostKeyChecking=no",
+		"-o", "UserKnownHostsFile=/dev/null",
+	)
+
+	if len(opts) > 0 {
+		mountArgs = append(mountArgs, "-o", strings.Join(opts, ","))
+	}
+
+	// create target, os.Mkdirall is noop if it exists
+	err := os.MkdirAll(target, 0750)
+	if err != nil {
+		return err
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"cmd":  mountCmd,
+		"args": mountArgs,
+	}).Info("executing mount command")
+
+	out, err := exec.Command(mountCmd, mountArgs...).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("mounting failed: %v cmd: '%s %s' output: %q",
+			err, mountCmd, strings.Join(mountArgs, " "), string(out))
+	}
+
+	return nil
 }
