@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: data-nfsplugin
+  name: data-sshfs
   labels:
-    name: data-nfsplugin
+    name: data-sshfs
 spec:
   accessModes:
   - ReadWriteMany
@@ -13,15 +13,15 @@ spec:
     driver: csi-sshfs
     volumeHandle: data-id
     volumeAttributes: 
-      server: 127.0.0.1
+      server: 10.135.35.241
       port: 22
-      path: /export
-      privateKey: de
+      path: /root/export
+      privateKey: default/testvol
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: data-nfsplugin
+  name: data-sshfs
 spec:
   accessModes:
   - ReadWriteMany
@@ -32,7 +32,7 @@ spec:
     matchExpressions:
     - key: name
       operator: In
-      values: ["data-nfsplugin"]
+      values: ["data-sshfs"]
 ---
 apiVersion: v1
 kind: Pod
@@ -48,8 +48,8 @@ spec:
       protocol: TCP
     volumeMounts:
       - mountPath: /var/www
-        name: data-nfsplugin 
+        name: data-sshfs
   volumes:
-  - name: data-nfsplugin
+  - name: data-sshfs
     persistentVolumeClaim:
-      claimName: data-nfsplugin 
+      claimName: data-sshfs
