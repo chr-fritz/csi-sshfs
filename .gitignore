@@ -20,7 +20,6 @@ Temporary Items
 .fuse_hidden*
 .directory
 .Trash-*
-.nfs*
 .idea/**/workspace.xml
 .idea/**/tasks.xml
 .idea/**/usage.statistics.xml

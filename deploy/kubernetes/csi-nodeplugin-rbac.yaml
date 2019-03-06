@@ -3,7 +3,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: csi-nodeplugin-sshfs
-
+  namespace: csi-sshfs
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -30,7 +30,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: csi-nodeplugin-sshfs
-    namespace: default
+    namespace: csi-sshfs
 roleRef:
   kind: ClusterRole
   name: csi-nodeplugin-sshfs

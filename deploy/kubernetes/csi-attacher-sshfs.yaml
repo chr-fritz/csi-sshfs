@@ -1,24 +1,11 @@
 # This YAML file contains attacher & csi driver API objects that are necessary
-# to run external CSI attacher for nfs
+# to run external CSI attacher for sshfs
 
-kind: Service
-apiVersion: v1
-metadata:
-  name: csi-attacher-sshfs
-  labels:
-    app: csi-attacher-sshfs
-spec:
-  selector:
-    app: csi-attacher-sshfs
-  ports:
-    - name: dummy
-      port: 12345
-
----
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
   name: csi-attacher-sshfs
+  namespace: csi-sshfs
 spec:
   serviceName: "csi-attacher"
   replicas: 1
@@ -30,7 +17,7 @@ spec:
       labels:
         app: csi-attacher-sshfs
     spec:
-      serviceAccountName: csi-attacher
+      serviceAccountName: csi-attacher-sshfs
       containers:
         - name: csi-attacher
           image: quay.io/k8scsi/csi-attacher:v1.0.1
@@ -40,7 +27,7 @@ spec:
           env:
             - name: ADDRESS
               value: /csi/csi.sock
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
@@ -57,7 +44,7 @@ spec:
                   fieldPath: spec.nodeName
             - name: CSI_ENDPOINT
               value: unix://plugin/csi.sock
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           volumeMounts:
             - name: socket-dir
               mountPath: /plugin

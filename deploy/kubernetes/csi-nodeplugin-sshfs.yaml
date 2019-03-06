@@ -1,9 +1,10 @@
 # This YAML file contains driver-registrar & csi driver nodeplugin API objects
-# that are necessary to run CSI nodeplugin for nfs
+# that are necessary to run CSI nodeplugin for sshfs
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
   name: csi-nodeplugin-sshfs
+  namespace: csi-sshfs
 spec:
   selector:
     matchLabels:
