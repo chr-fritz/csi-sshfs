@@ -47,6 +47,7 @@ func NewDriver(nodeID, endpoint string) *driver {
 func NewNodeServer(d *driver) *nodeServer {
 	return &nodeServer{
 		DefaultNodeServer: csicommon.NewDefaultNodeServer(d.csiDriver),
+		mounts:            map[string]*mountPoint{},
 	}
 }
 
