@@ -1,0 +1,88 @@
+# This YAML file contains driver-registrar & csi driver nodeplugin API objects
+# that are necessary to run CSI nodeplugin for sshfs
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: csi-nodeplugin-sshfs
+spec:
+  selector:
+    matchLabels:
+      app: csi-nodeplugin-sshfs
+  template:
+    metadata:
+      labels:
+        app: csi-nodeplugin-sshfs
+    spec:
+      serviceAccountName: csi-nodeplugin-sshfs
+      hostNetwork: true
+      containers:
+        - name: sshfs
+          securityContext:
+            privileged: true
+            capabilities:
+              #              add: ["SYS_ADMIN"]
+              add: ["SYS_ADMIN","SYS_PTRACE"]
+            allowPrivilegeEscalation: true
+          image: chrfritz/csi-nodeplugin-sshfs:debug-latest
+          command:
+            - "/dlv"
+            - "--listen=:40000"
+            - "--headless=true"
+            - "--api-version=2"
+            - "exec"
+            - "/bin/csi-sshfs"
+            - "--"
+            - "--nodeid=$(NODE_ID)"
+            - "--endpoint=$(CSI_ENDPOINT)"
+          env:
+            - name: NODE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: CSI_ENDPOINT
+              value: tcp://0.0.0.0:10000
+          ports:
+            - containerPort: 10000
+              protocol: TCP
+              name: csi-endpoint
+            - containerPort: 40000
+              protocol: TCP
+              name: debug
+          imagePullPolicy: "Always"
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /plugin
+            - name: pods-mount-dir
+              mountPath: /var/lib/kubelet/pods
+              mountPropagation: "Bidirectional"
+      volumes:
+        - name: plugin-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/csi-sshfs
+            type: DirectoryOrCreate
+        - name: pods-mount-dir
+          hostPath:
+            path: /var/lib/kubelet/pods
+            type: Directory
+        - hostPath:
+            path: /var/lib/kubelet/plugins_registry
+            type: Directory
+          name: registration-dir
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: csi-nodeplugin-sshfs
+spec:
+  type: NodePort
+  ports:
+    - port: 40000
+      targetPort: debug
+      nodePort: 31040
+      name: debug
+    - targetPort: csi-endpoint
+      nodePort: 31010
+      port: 10000
+      name: csi-endpoint
+  selector:
+    app: csi-nodeplugin-sshfs
