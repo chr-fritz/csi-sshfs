@@ -9,14 +9,16 @@ spec:
   - ReadWriteMany
   capacity:
     storage: 100Gi
+  storageClassName: sshfs
   csi:
     driver: csi-sshfs
     volumeHandle: data-id
-    volumeAttributes: 
-      server: 10.135.35.241
-      port: 22
-      path: /root/export
-      privateKey: default/testvol
+    volumeAttributes:
+      server: "10.135.151.63"
+      port: "22"
+      share: "/root/testvol"
+      privateKey: "default/testvol"
+      user: "root"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -28,11 +30,10 @@ spec:
   resources:
     requests:
       storage: 100Gi
+  storageClassName: sshfs
   selector:
-    matchExpressions:
-    - key: name
-      operator: In
-      values: ["data-sshfs"]
+    matchLabels:
+      name: data-sshfs
 ---
 apiVersion: v1
 kind: Pod
