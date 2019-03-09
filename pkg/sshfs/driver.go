@@ -3,7 +3,6 @@ package sshfs
 import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
-
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
 )
 
@@ -22,11 +21,12 @@ const (
 )
 
 var (
-	Version = "latest"
+	Version   = "latest"
+	BuildTime = "1970-01-01 00:00:00"
 )
 
 func NewDriver(nodeID, endpoint string) *driver {
-	glog.Infof("Driver: %v version: %v", driverName, Version)
+	glog.Infof("Starting new %s driver in version %s built %s", driverName, Version, BuildTime)
 
 	d := &driver{}
 

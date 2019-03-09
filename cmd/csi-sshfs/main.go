@@ -10,9 +10,8 @@ import (
 )
 
 var (
-	endpoint  string
-	nodeID    string
-	BuildTime string
+	endpoint string
+	nodeID   string
 )
 
 func init() {
@@ -46,7 +45,7 @@ func main() {
 			fmt.Printf(`CSI-SSHFS Plugin
 Version:    %s
 Build Time: %s
-`, sshfs.Version, BuildTime)
+`, sshfs.Version, sshfs.BuildTime)
 		},
 	}
 
