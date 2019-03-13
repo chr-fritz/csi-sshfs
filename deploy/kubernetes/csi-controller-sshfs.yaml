@@ -4,20 +4,20 @@
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
-  name: csi-attacher-sshfs
+  name: csi-controller-sshfs
   namespace: csi-sshfs
 spec:
-  serviceName: "csi-attacher"
+  serviceName: "csi-controller-sshfs"
   replicas: 1
   selector:
     matchLabels:
-      app: csi-attacher-sshfs
+      app: csi-controller-sshfs
   template:
     metadata:
       labels:
-        app: csi-attacher-sshfs
+        app: csi-controller-sshfs
     spec:
-      serviceAccountName: csi-attacher-sshfs
+      serviceAccountName: csi-controller-sshfs
       containers:
         - name: csi-attacher
           image: quay.io/k8scsi/csi-attacher:v1.0.1
@@ -44,7 +44,7 @@ spec:
             - name: socket-dir
               mountPath: /csi
         - name: sshfs
-          image: chrfritz/csi-nodeplugin-sshfs:latest
+          image: chrfritz/csi-sshfs:latest
           args :
             - "--nodeid=$(NODE_ID)"
             - "--endpoint=$(CSI_ENDPOINT)"
