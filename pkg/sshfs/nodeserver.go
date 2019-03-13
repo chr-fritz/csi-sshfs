@@ -53,6 +53,9 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 	if req.GetReadonly() {
 		mountOptions = append(mountOptions, "ro")
 	}
+	if e := validateVolumeContext(req); e != nil {
+		return nil, e
+	}
 
 	server := req.GetVolumeContext()["server"]
 	user := req.GetVolumeContext()["user"]
@@ -119,6 +122,22 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 
 func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
 	return &csi.NodeStageVolumeResponse{}, nil
+}
+
+func validateVolumeContext(req *csi.NodePublishVolumeRequest) error {
+	if _, ok := req.GetVolumeContext()["server"]; ok {
+		return status.Errorf(codes.InvalidArgument, "missing volume context value: server")
+	}
+	if _, ok := req.GetVolumeContext()["user"]; ok {
+		return status.Errorf(codes.InvalidArgument, "missing volume context value: user")
+	}
+	if _, ok := req.GetVolumeContext()["share"]; ok {
+		return status.Errorf(codes.InvalidArgument, "missing volume context value: share")
+	}
+	if _, ok := req.GetVolumeContext()["privateKey"]; ok {
+		return status.Errorf(codes.InvalidArgument, "missing volume context value: privateKey")
+	}
+	return nil
 }
 
 func getPublicKeySecret(secretName string) (*v1.Secret, error) {
