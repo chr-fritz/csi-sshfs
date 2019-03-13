@@ -125,16 +125,16 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 }
 
 func validateVolumeContext(req *csi.NodePublishVolumeRequest) error {
-	if _, ok := req.GetVolumeContext()["server"]; ok {
+	if _, ok := req.GetVolumeContext()["server"]; !ok {
 		return status.Errorf(codes.InvalidArgument, "missing volume context value: server")
 	}
-	if _, ok := req.GetVolumeContext()["user"]; ok {
+	if _, ok := req.GetVolumeContext()["user"]; !ok {
 		return status.Errorf(codes.InvalidArgument, "missing volume context value: user")
 	}
-	if _, ok := req.GetVolumeContext()["share"]; ok {
+	if _, ok := req.GetVolumeContext()["share"]; !ok {
 		return status.Errorf(codes.InvalidArgument, "missing volume context value: share")
 	}
-	if _, ok := req.GetVolumeContext()["privateKey"]; ok {
+	if _, ok := req.GetVolumeContext()["privateKey"]; !ok {
 		return status.Errorf(codes.InvalidArgument, "missing volume context value: privateKey")
 	}
 	return nil
