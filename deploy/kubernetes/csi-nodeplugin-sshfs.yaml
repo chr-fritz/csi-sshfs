@@ -43,7 +43,7 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: chrfritz/csi-nodeplugin-sshfs:latest
+          image: chrfritz/csi-sshfs:latest
           args:
             - "--nodeid=$(NODE_ID)"
             - "--endpoint=$(CSI_ENDPOINT)"
