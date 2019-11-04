@@ -1,6 +1,6 @@
 # Container Storage Interface Driver for SSHFS
 
-**Warning: This is a Proof of Concept only. It should not be used in Production environments!**
+**Warning: This is only a proof of concept and is not actively maintained. It should not be used in production environments!**
 
 This repository contains the CSI driver for SSHFS. It allows to mount directories using a ssh connection.
 
