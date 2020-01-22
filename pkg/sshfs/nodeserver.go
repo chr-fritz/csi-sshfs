@@ -58,6 +58,7 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 	}
 
 	server := req.GetVolumeContext()["server"]
+	port := req.GetVolumeContext()["port"]
 	user := req.GetVolumeContext()["user"]
 	ep := req.GetVolumeContext()["share"]
 	privateKey := req.GetVolumeContext()["privateKey"]
@@ -71,7 +72,7 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		return nil, e
 	}
 
-	e = Mount(user, server, ep, targetPath, privateKeyPath)
+	e = Mount(user, server, port, ep, targetPath, privateKeyPath)
 	if e != nil {
 		if os.IsPermission(e) {
 			return nil, status.Error(codes.PermissionDenied, e.Error())
@@ -128,6 +129,9 @@ func validateVolumeContext(req *csi.NodePublishVolumeRequest) error {
 	if _, ok := req.GetVolumeContext()["server"]; !ok {
 		return status.Errorf(codes.InvalidArgument, "missing volume context value: server")
 	}
+	if _, ok := req.GetVolumeContext()["port"]; !ok {
+		return status.Errorf(codes.InvalidArgument, "missing volume context value: port")
+	}
 	if _, ok := req.GetVolumeContext()["user"]; !ok {
 		return status.Errorf(codes.InvalidArgument, "missing volume context value: user")
 	}
@@ -182,7 +186,7 @@ func writePrivateKey(secret *v1.Secret) (string, error) {
 	return f.Name(), nil
 }
 
-func Mount(user string, host string, dir string, target string, privateKey string, opts ...string) error {
+func Mount(user string, host string, port string, dir string, target string, privateKey string, opts ...string) error {
 	mountCmd := "sshfs"
 	mountArgs := []string{}
 
@@ -191,6 +195,7 @@ func Mount(user string, host string, dir string, target string, privateKey strin
 		mountArgs,
 		source,
 		target,
+		"-o", "port="+port
 		"-o", "IdentityFile="+privateKey,
 		"-o", "StrictHostKeyChecking=accept-new",
 		"-o", "UserKnownHostsFile=/dev/null",
