@@ -195,7 +195,7 @@ func Mount(user string, host string, port string, dir string, target string, pri
 		mountArgs,
 		source,
 		target,
-		"-o", "port="+port
+		"-o", "port="+port,
 		"-o", "IdentityFile="+privateKey,
 		"-o", "StrictHostKeyChecking=accept-new",
 		"-o", "UserKnownHostsFile=/dev/null",
