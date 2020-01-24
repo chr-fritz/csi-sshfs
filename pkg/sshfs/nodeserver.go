@@ -66,6 +66,7 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 	user := req.GetVolumeContext()["user"]
 	ep := req.GetVolumeContext()["share"]
 	privateKey := req.GetVolumeContext()["privateKey"]
+	sshOpts := req.GetVolumeContext()["sshOpts"]
 
 	secret, e := getPublicKeySecret(privateKey)
 	if e != nil {
@@ -76,7 +77,7 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		return nil, e
 	}
 
-	e = Mount(user, server, port, ep, targetPath, privateKeyPath)
+	e = Mount(user, server, port, ep, targetPath, privateKeyPath, sshOpts)
 	if e != nil {
 		if os.IsPermission(e) {
 			return nil, status.Error(codes.PermissionDenied, e.Error())
@@ -187,7 +188,7 @@ func writePrivateKey(secret *v1.Secret) (string, error) {
 	return f.Name(), nil
 }
 
-func Mount(user string, host string, port string, dir string, target string, privateKey string, opts ...string) error {
+func Mount(user string, host string, port string, dir string, target string, privateKey string, sshOpts string) error {
 	mountCmd := "sshfs"
 	mountArgs := []string{}
 
@@ -202,8 +203,8 @@ func Mount(user string, host string, port string, dir string, target string, pri
 		"-o", "UserKnownHostsFile=/dev/null",
 	)
 
-	if len(opts) > 0 {
-		mountArgs = append(mountArgs, "-o", strings.Join(opts, ","))
+	if len(sshOpts) > 0 {
+		mountArgs = append(mountArgs, "-o", sshOpts)
 	}
 
 	// create target, os.Mkdirall is noop if it exists
