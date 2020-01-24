@@ -59,6 +59,10 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 
 	server := req.GetVolumeContext()["server"]
 	port := req.GetVolumeContext()["port"]
+	if len(port) == 0 {
+		port = "22"
+	}
+
 	user := req.GetVolumeContext()["user"]
 	ep := req.GetVolumeContext()["share"]
 	privateKey := req.GetVolumeContext()["privateKey"]
@@ -128,9 +132,6 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 func validateVolumeContext(req *csi.NodePublishVolumeRequest) error {
 	if _, ok := req.GetVolumeContext()["server"]; !ok {
 		return status.Errorf(codes.InvalidArgument, "missing volume context value: server")
-	}
-	if _, ok := req.GetVolumeContext()["port"]; !ok {
-		return status.Errorf(codes.InvalidArgument, "missing volume context value: port")
 	}
 	if _, ok := req.GetVolumeContext()["user"]; !ok {
 		return status.Errorf(codes.InvalidArgument, "missing volume context value: user")
